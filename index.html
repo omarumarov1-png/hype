@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Бизнес-игра на креатив про звёзд и бренды: 4 варианта ответа или свой, таймер, очки. От одного игрока и больше.">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<title>Правда или Дедлайн</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one column, a task-tracker "ticket" as the game card, a mono countdown as the deadline, KPI bars as the scoreboard. */
+:root{
+  --bg:#eef1f6; --surface:#ffffff; --surface-2:#f6f8fb; --ink:#141a26; --muted:#5b6578; --line:#d6dce7;
+  --deadline:#e2322b; --deadline-soft:#fde6e4; --truth:#2f5bea; --truth-soft:#e3eafe;
+  --marker:#ffd84d; --marker-ink:#2b2200; --ok:#17885c; --ok-soft:#dcf3e9; --warn:#c77a00; --bad-soft:#fde6e4;
+  --p1:#2f5bea; --p2:#d6336c; --p3:#c77a00; --p4:#17885c; --p5:#7b4ddb; --p6:#0e8a9e; --p7:#b5481c; --p8:#5c6b1f;
+  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f131b; --surface:#171d29; --surface-2:#1d2433; --ink:#e8ecf4; --muted:#9aa5b8; --line:#2b3447;
+  --deadline:#ff5a52; --deadline-soft:#3a1b1c; --truth:#7393ff; --truth-soft:#1c2647;
+  --marker:#ffd84d; --marker-ink:#2b2200; --ok:#3ccf91; --ok-soft:#16352a; --warn:#f2b33d; --bad-soft:#3a1b1c;
+  --p1:#7393ff; --p2:#ff6f9c; --p3:#f2b33d; --p4:#3ccf91; --p5:#ad8bff; --p6:#4fd0e3; --p7:#ff8a5b; --p8:#b9d35a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f131b; --surface:#171d29; --surface-2:#1d2433; --ink:#e8ecf4; --muted:#9aa5b8; --line:#2b3447;
+  --deadline:#ff5a52; --deadline-soft:#3a1b1c; --truth:#7393ff; --truth-soft:#1c2647;
+  --marker:#ffd84d; --marker-ink:#2b2200; --ok:#3ccf91; --ok-soft:#16352a; --warn:#f2b33d; --bad-soft:#3a1b1c;
+  --p1:#7393ff; --p2:#ff6f9c; --p3:#f2b33d; --p4:#3ccf91; --p5:#ad8bff; --p6:#4fd0e3; --p7:#ff8a5b; --p8:#b9d35a; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--truth);outline-offset:2px}
+.muted{color:var(--muted)}
+.label{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.logo{display:flex;align-items:baseline;gap:8px;font-family:var(--f-display);font-weight:800;font-size:20px;letter-spacing:-.01em}
+.logo .or{font-family:var(--f-body);font-weight:500;font-size:14px;color:var(--muted)}
+.logo .dl{color:var(--deadline)}
+.top-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.round-pill{font-family:var(--f-mono);font-size:13px;border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--surface)}
+.team-btn{font-size:14px;border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--surface);font-weight:600}
+.team-btn:hover{border-color:var(--ink)}
+
+/* buttons */
+.btn{border:0;border-radius:8px;padding:12px 20px;font-weight:600;background:var(--ink);color:var(--bg);display:inline-flex;align-items:center;gap:8px}
+.btn:hover{filter:brightness(1.12)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.ghost:hover{background:var(--surface-2);filter:none}
+.btn.big{padding:16px 26px;font-size:17px}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+/* panels */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+.panel h2{font-size:20px;margin-bottom:12px}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.panel-head h2{margin:0}
+
+/* hero */
+.hero{display:flex;flex-direction:column;gap:12px;padding-block:8px 4px}
+.hero h1{font-size:clamp(30px,6.4vw,52px);font-weight:800;letter-spacing:-.02em}
+.hero h1 .dl{color:var(--deadline);white-space:nowrap}
+.hero h1 .tr{background:linear-gradient(transparent 58%,var(--marker) 58%,var(--marker) 90%,transparent 90%)}
+.hero p{margin:0;max-width:58ch;color:var(--muted);font-size:17px}
+
+/* team editor */
+.players{display:flex;flex-direction:column;gap:10px}
+.prow{display:flex;gap:10px;align-items:center}
+.dot{width:12px;height:12px;border-radius:50%;flex:none;background:var(--pc)}
+.prow input,.addrow input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:10px 12px}
+.prow .pts{font-family:var(--f-mono);font-size:13px;color:var(--muted);min-width:56px;text-align:right}
+.icon-btn{width:40px;height:40px;flex:none;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--muted);font-size:20px;line-height:1}
+.icon-btn:hover:not(:disabled){color:var(--deadline);border-color:var(--deadline)}
+.icon-btn:disabled{opacity:.35;cursor:not-allowed}
+.addrow{display:flex;gap:10px;margin-top:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:8px 14px;font-family:var(--f-mono);font-size:14px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:18px}
+.settings > div{display:flex;flex-direction:column;gap:8px}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 22px;margin:0;padding:0;list-style:none}
+.rules li{display:flex;gap:10px;font-size:15px}
+.rules b{font-family:var(--f-mono);font-size:13px;color:var(--muted);min-width:46px;padding-top:2px}
+.err{color:var(--deadline);font-size:14px;min-height:21px;margin:8px 0 0}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+
+/* ticket card */
+.ticket{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;position:relative}
+.ticket::before{content:"";position:absolute;inset:0 auto 0 0;width:6px;background:var(--kind)}
+.ticket.k-dl{--kind:var(--deadline);--kind-soft:var(--deadline-soft)}
+.ticket.k-tr{--kind:var(--truth);--kind-soft:var(--truth-soft)}
+.t-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 18px 12px 24px;border-bottom:1px dashed var(--line);font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.t-head .kind{color:var(--kind);font-weight:700;letter-spacing:.06em}
+.t-body{padding:18px 22px 20px 24px;display:flex;flex-direction:column;gap:10px}
+.t-body .q{font-size:clamp(20px,3.6vw,27px);font-weight:600;line-height:1.3;text-wrap:pretty}
+.t-body .hint{font-size:14px;color:var(--muted)}
+.tag{display:inline-block;background:var(--kind-soft);color:var(--kind);border-radius:4px;padding:1px 7px;font-weight:700}
+
+/* handoff */
+.handoff{display:flex;flex-direction:column;gap:14px;padding-block:30px}
+.handoff .who{font-size:clamp(34px,7vw,56px);font-weight:800;color:var(--pc);overflow-wrap:anywhere}
+.handoff p{margin:0;font-size:18px;color:var(--muted);max-width:50ch}
+.toast{align-self:flex-start;font-size:14px;border-radius:6px;padding:6px 12px;background:var(--ok-soft);color:var(--ok);font-weight:600}
+.toast.bad{background:var(--bad-soft);color:var(--deadline)}
+
+/* answer */
+.timer{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.clock{font-family:var(--f-mono);font-weight:700;font-size:44px;line-height:1;font-variant-numeric:tabular-nums;color:var(--tc)}
+.clock small{display:block;font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.track{flex:1;min-width:160px;height:10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
+.fill{height:100%;background:var(--tc);transform-origin:left;transition:background .3s}
+.t-calm{--tc:var(--ok)} .t-warn{--tc:var(--warn)} .t-panic{--tc:var(--deadline)}
+.t-panic .clock{animation:pulse .5s ease-in-out infinite alternate}
+@keyframes pulse{to{opacity:.55}}
+textarea{width:100%;min-height:150px;resize:vertical;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:16px;font-size:18px;line-height:1.45}
+textarea:focus{border-color:var(--pc);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--pc) 25%,transparent)}
+.answer-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.flash{position:fixed;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--deadline) 88%,transparent);color:#fff;z-index:20;font-family:var(--f-display);font-weight:800;font-size:clamp(40px,11vw,96px);letter-spacing:-.02em;animation:flash .9s ease-out forwards}
+@keyframes flash{0%{opacity:0;transform:scale(1.08)}15%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0}}
+
+/* results */
+.results{display:flex;flex-direction:column;gap:12px}
+.res{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--pc);border-radius:var(--radius);padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.res-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.res-name{font-weight:700;font-size:18px;color:var(--pc)}
+.res-pts{font-family:var(--f-mono);font-weight:700;font-size:22px}
+.crown{font-family:var(--f-mono);font-size:12px;background:var(--marker);color:var(--marker-ink);border-radius:4px;padding:2px 7px;margin-left:8px;font-weight:700;letter-spacing:.04em;vertical-align:middle}
+.res blockquote{margin:0;font-size:17px;padding-left:12px;border-left:2px solid var(--line);overflow-wrap:anywhere}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--f-mono);font-size:12.5px;border-radius:5px;padding:3px 8px;background:var(--surface-2);color:var(--muted)}
+.chip.plus{background:var(--ok-soft);color:var(--ok)} .chip.minus{background:var(--bad-soft);color:var(--deadline)}
+.verdict{font-size:15px;font-weight:600}
+
+/* scoreboard */
+.board{display:flex;flex-direction:column;gap:10px}
+.brow{display:grid;grid-template-columns:26px minmax(70px,150px) 1fr 52px;align-items:center;gap:12px}
+.brow .pl{font-family:var(--f-mono);color:var(--muted)}
+.brow .nm{font-weight:600;color:var(--pc);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow .bar{height:12px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.brow .bar i{display:block;height:100%;background:var(--pc);transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.brow .sc{font-family:var(--f-mono);font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+
+/* final */
+.podium{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));align-items:end;gap:10px;max-width:calc(var(--cols) * 240px)}
+.step{background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--pc);border-radius:var(--radius);padding:14px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.step .place{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.step .nm{font-family:var(--f-display);font-weight:800;font-size:clamp(16px,3.4vw,22px);color:var(--pc);overflow-wrap:anywhere}
+.step .sc{font-family:var(--f-mono);font-weight:700;font-size:20px}
+.step .ttl{font-size:13px;color:var(--muted)}
+.podium.n3 .p1{order:2} .podium.n3 .p2{order:1} .podium.n3 .p3{order:3}
+.step.p1{min-height:190px} .step.p2{min-height:160px} .step.p3{min-height:135px}
+.memo{background:var(--marker);color:var(--marker-ink);border-radius:var(--radius);padding:18px 20px;font-weight:600;font-size:17px}
+.others{display:flex;flex-direction:column;gap:6px}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:14px;font-size:16px;line-height:1.4;min-width:0}
+.opt:hover{border-color:var(--pc);background:var(--surface-2)}
+.opt-l{font-family:var(--f-mono);font-weight:700;flex:none;width:26px;height:26px;border-radius:6px;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--line);color:var(--pc)}
+.or-line{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:14px}
+.or-line::before,.or-line::after{content:"";flex:1;height:1px;background:var(--line)}
+@media (max-width:560px){.opts{grid-template-columns:1fr}}
+.exit-btn{color:var(--deadline)}
+.exit-btn:hover{border-color:var(--deadline)}
+.overlay{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:color-mix(in srgb,var(--ink) 45%,transparent);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px}
+.dialog{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;max-width:460px;width:100%;display:flex;flex-direction:column;gap:12px}
+.dialog h2{font-size:20px}
+.dialog p{margin:0}
+@media (max-width:520px){
+  .brow{grid-template-columns:22px minmax(60px,96px) 1fr 44px;gap:8px}
+  .clock{font-size:38px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app" aria-live="polite"></div>
+
+<script>
+(() => {
+"use strict";
+// ───────── cards: [type, text, topic stems] · dl = ДЕДЛАЙН (business case under pressure), tr = ПРАВДА (honest business opinion) ─────────
+const CARDS = [
+  ["dl","Илон Маск предлагает вам возглавить продажи билетов на Марс. Как продадите первый рейс?",["маск","марс","билет","ракет","космос","полет","пассажир"],["Продать первый рейс с аукциона: победитель летит, остальные получают места на второй", "Бесплатный обратный билет в подарок — только для тех, кто вернётся", "Подписка «Марс Prime»: копите мили на земных перелётах и меняйте на место в ракете", "Повесить баннер в аэропорту: «Марс. Недорого»"]],
+  ["dl","Тейлор Свифт хочет запустить свой бренд кроссовок. Придумайте название и первую рекламную кампанию.",["свифт","тейлор","кроссовк","бренд","фанат","тур","назван"],["«Swift Steps»: каждая пара открывает секретный трек, лимитка выходит в день старта тура", "Кроссовки, которые сами останавливаются, если вы идёте к бывшему", "Коллаб с фанатами: дизайн выбирают голосованием в соцсетях", "Обычные белые кроссовки с подписью «Taylor»"]],
+  ["dl","MrBeast профинансирует ваш стартап, если вы придумаете челлендж, который покажет продукт. Ваш челлендж?",["mrbeast","бист","челлендж","видео","продукт","приз","ютуб"],["Кто дольше всех проживёт 100 дней только с нашим продуктом, получает долю в компании", "1000 человек пытаются объяснить бабушкам, что делает наш стартап", "Спрятать главный приз в одной упаковке из миллиона проданных", "Снять распаковку продукта"]],
+  ["dl","Гордон Рамзи пришёл в ваш ресторан с проверкой, а шеф-повар заболел. Ваши действия?",["рамзи","гордон","ресторан","повар","кухн","блюд","провер"],["Честно сказать, что повар болен, и предложить Гордону приготовить блюдо вместе на камеру", "Встать к плите самому и кричать на себя громче Гордона", "Подать лучшее, что умеем готовить без шефа, и коротко объяснить ситуацию", "Сказать, что кухня закрыта на санитарный день"]],
+  ["dl","Ким Кардашьян выложила фото с вашим продуктом, и сайт упал. Как не потерять 100 000 покупателей?",["кардашьян","ким","сайт","покупател","заказ","очеред","предзаказ"],["Сразу открыть предзаказ со скидкой «Ким-день» и собрать почты всех, кто ждёт", "Повесить на сайт фото Ким с подписью «Она тоже ждёт»", "Перевести продажи в соцсети и маркетплейсы, пока чиним сайт", "Подождать, пока сайт сам поднимется"]],
+  ["dl","Киану Ривз согласился бесплатно сняться в рекламе вашей кофейни. У вас один кадр. Что он делает и говорит?",["киану","ривз","кофейн","кофе","реклам","кадр","джон"],["Киану отдаёт свой кофе следующему в очереди: «Будь добрее». Слоган: «Кофе, который передают дальше»", "Киану говорит бариста: «Ты потрясающий!» — и вся очередь аплодирует", "Киану берёт латте, улыбается в камеру и коротко говорит: «Великолепно»", "Киану просто пьёт кофе на фоне логотипа"]],
+  ["dl","Лионель Месси хочет купить ваш футбольный клуб из третьей лиги. Как поднимете цену?",["месси","клуб","футбол","цен","лиг","стадион","фанат"],["Устроить торг между Месси и двумя инвестфондами, пусть поднимают ставку", "Поднять цену на 10 миллионов за каждый его «Золотой мяч»", "Показать, как выросли продажи билетов и мерча с первыми слухами о сделке", "Согласиться на первую цену — это же Месси!"]],
+  ["dl","Рианна ищет партнёра для линии мужской косметики. Ваш питч за 30 секунд!",["рианн","косметик","мужск","питч","бренд","партнер","линейк"],["Уход за 3 минуты, упаковка как у гаджета, слоган «Не для всех мужчин, а для каждого»", "Крем, который спорит с вами, что умыться всё-таки надо", "Линейка для спортсменов с запахом, который нравится и им, и окружающим", "Тот же крем, только в чёрной банке"]],
+  ["dl","Стив Джобс на один день вернулся и смотрит вашу презентацию. Что вы покажете в первые 30 секунд?",["джобс","презентац","слайд","продукт","айфон","apple","одна вещь"],["Показать продукт молча, а потом сказать: «И ещё одна вещь…»", "Слайд «Мы сами не знаем, что это, но оно белое и красивое»", "Начать с проблемы, которая есть у каждого в зале", "Таблица из Excel на 40 строк"]],
+  ["dl","Джефф Безос спрашивает, что ещё Amazon должен доставлять дронами. Ваша идея и бизнес-модель?",["безос","amazon","амазон","дрон","доставк","подписк","посылк"],["Горячие завтраки к 7:00 по подписке, прямо на балкон", "Забытые ключи — прямо к закрытой двери", "Срочные лекарства в загородные дома", "Ещё больше маленьких коробок"]],
+  ["dl","Марк Цукерберг хочет купить ваше приложение. Назовите цену и обоснуйте её.",["цукерберг","прилож","цен","миллиард","пользовател","аудитори","сделк"],["Миллиард долларов и обещание не закрывать приложение пять лет", "Цена — его худи и пожизненный аккаунт без рекламы", "Цена по прогнозу выручки на 10 лет и графики роста аудитории", "Сколько дадите, столько и хорошо"]],
+  ["dl","Хабиб Нурмагомедов открывает сеть спортзалов. Придумайте слоган и главную фишку.",["хабиб","спортзал","зал","слоган","борьб","тренир","фишк"],["Слоган «Отправь лень в нокаут», фишка — тренировки в горном режиме в 5 утра", "Выход из зала только через схватку с тренером", "Залы для всей семьи: борьба для детей, функционалка для родителей", "Обычный зал с портретом Хабиба на стене"]],
+  ["dl","Группа BTS выбирает напиток для своего мирового тура. Почему именно ваш?",["bts","тур","напиток","фанат","корея","армия","бренд"],["Семь вкусов, по одному на каждого участника, а на крышке QR-код с закулисьем тура", "Наш напиток выдерживает 50 000 фанатов, кричащих одновременно", "Лимитированная серия к туру с дизайном от фанатов", "Потому что он дешевле"]],
+  ["dl","Том Круз хочет снять трюк прямо в вашем офисе. Как превратить это в рекламу компании?",["круз","трюк","офис","реклам","съемк","миссия","вертолет"],["Том спускается на тросе в переговорную и подписывает контракт — это и есть наш ролик", "Том бежит по офису от отдела продаж с годовым планом", "Снять закулисье съёмок для соцсетей компании", "Попросить автограф и фото для сайта"]],
+  ["dl","Леди Гага выйдет на сцену в платье из вашего продукта. Из чего платье и как на этом заработать?",["гага","плать","сцен","продукт","мерч","хайп","коллекц"],["Платье из переработанной упаковки и в тот же вечер запуск эко-коллекции", "Платье из наших мармеладок: съедобно до последней песни", "Мерч с принтом платья для фанатов", "Просто разместить логотип на сцене"]],
+  ["dl","Опра Уинфри зовёт вас на шоу рассказать о вашем бизнесе. Какая история зацепит зрителей?",["опра","шоу","истори","зрител","бизнес","интервью","эфир"],["Как я трижды провалился и именно провал придумал наш продукт", "Как мама каждый день спрашивает, когда я найду нормальную работу", "История первого клиента, который в нас поверил", "Подробный рассказ о структуре компании"]],
+  ["dl","Джеки Чан случайно разбил витрину вашего магазина на съёмках. Как превратить это в маркетинг?",["джеки","чан","витрин","магазин","съемк","маркетинг","акци"],["Выставить разбитую витрину как арт-объект «Здесь был Джеки Чан» — очередь за селфи", "Распродажа «Удар Джеки»: скидка на всё, что уцелело", "Попросить снять с нами короткое видео про ремонт витрины", "Выставить студии счёт за ремонт"]],
+  ["dl","Эд Ширан написал песню о вашей компании. О чём припев и как вы заработаете на хите?",["ширан","песн","припев","хит","компан","стрим","клип"],["Припев о том, как наш продукт спас чьё-то первое свидание; зарабатываем на стримах и мерче", "Припев — это наш номер телефона, спетый на шесть ладов", "Песня о команде и мечте, клип снимаем у нас в офисе", "Песня о годовом отчёте"]],
+  ["dl","Netflix хочет снять сериал о вашем стартапе. Как он будет называться и кто сыграет вас?",["netflix","нетфликс","сериал","стартап","назван","актер","сезон"],["«Раунд»: драмеди, где каждый сезон — новый раунд инвестиций, а меня играет звезда «Дюны»", "«Перезвоните позже»: восемь сезонов о моих созвонах, меня играет кот", "«Старт»: история команды, меня играет Райан Гослинг", "«Компания»: документальный фильм о наших процессах"]],
+  ["dl","Фильм «Барби» сделал из куклы мировой хит. Какую игрушку вашего детства вы превратите в блокбастер?",["барби","игрушк","детств","блокбастер","фильм","кукл","франшиз"],["Тамагочи: триллер о том, как выжить, если тебя забыли покормить", "Кубик Рубика: два часа неуверенного кручения и катарсис в финале", "Конструктор, из которого собирают целый город", "Мячик"]],
+  ["dl","Леброн Джеймс инвестирует в вашу пиццерию. Какую пиццу назовёте в его честь и сколько она стоит?",["леброн","джеймс","пицц","баскетбол","назов","цен","инвест"],["«Король кольца»: пицца-кольцо из 23 кусочков за 23 доллара", "«Данк»: пиццу подают сверху через баскетбольное кольцо", "«Леброн»: три вида мяса для настоящих спортсменов", "«Маргарита Джеймс»"]],
+  ["dl","Зендея может стать лицом вашего бренда. Напишите первую фразу письма её агенту.",["зендея","бренд","агент","письм","лицо","амбассадор","контракт"],["«Мы не просим сыграть роль — мы предлагаем создать бренд вместе»", "«Наш кот уже согласился, осталась только Зендея»", "«Наш бренд о смелости быть собой, как и её роли»", "«Здравствуйте, сколько стоит Зендея?»"]],
+  ["dl","Райан Рейнольдс славится смешной рекламой. Напишите в его стиле рекламу вашего тостера.",["рейнольдс","дэдпул","реклам","тостер","шутк","ролик","стиль"],["«Этот тостер жарит быстрее, чем мой агент читает контракты»", "«Он прослужит десять лет. Как и я. Оба будем выглядеть отлично»", "«Тостер, который делает утро чуть лучше. Проверено на себе»", "«Хороший тостер. Покупайте»"]],
+  ["dl","Бейонсе выпускает мерч к туру, но фабрика сорвала сроки. Что продадите фанатам вместо него?",["бейонсе","мерч","тур","фабрик","срок","фанат","предзаказ"],["Цифровой мерч: эксклюзивные фото с концерта и скидка на настоящий мерч позже", "Пустые коробки с надписью «Скоро» — фанаты всё равно купят", "Предзаказ с доставкой после тура и бонусом за ожидание", "Извиниться и ничего не продавать"]],
+  ["dl","Вам дали эфир в «Акулах бизнеса»: 30 секунд, чтобы получить инвестиции. Ваш питч!",["акул","питч","инвестиц","доля","оценк","бизнес","эфир"],["«Мы уже окупились в трёх городах — дайте денег ещё на десять»", "«Я единственный пришёл без презентации. В этом и инновация»", "«Мы решаем проблему, которая есть у каждого из вас дома»", "«Дайте денег, а там посмотрим»"]],
+  ["dl","Ваш продукт случайно попал в кадр фильма Marvel и стал мемом. Как используете хайп?",["marvel","марвел","кадр","мем","хайп","фильм","герой"],["Выпустить лимитку «Как у героев» и коллаб с фан-сообществами", "Заявить, что наш продукт — тайный член команды супергероев", "Подхватить мем и сделать серию шуточных постов", "Ничего не делать — само пройдёт"]],
+  ["tr","Кого из знаменитостей вы бы назначили CEO своей компании и почему?",["ceo","директор","знаменит","компан","назнач","лидер"],["Опру Уинфри: умеет слушать людей и продавать идеи", "Гордона Рамзи: KPI будут выполняться из страха", "Илона Маска: рискнёт там, где другие боятся", "Не знаю, кого-нибудь умного"]],
+  ["tr","С какой звездой вы бы открыли совместный бизнес и какой именно?",["звезд","бизнес","совместн","бренд","коллаб","откры"],["С Хабибом — сеть детских спортзалов в регионах", "С Киану Ривзом — прокат мотоциклов и добрых слов", "С Гордоном Рамзи — кулинарную школу", "С кем угодно, лишь бы платили"]],
+  ["tr","Какую покупку вы сделали только потому, что её рекламировала знаменитость?",["покупк","реклам","знаменит","блогер","купил","бренд"],["Кроссовки, в которых бегал любимый спортсмен. Я в них до сих пор не бегаю", "Шампунь после рекламы с волосами в замедленной съёмке", "Наушники, которые носил известный музыкант", "Ничего такого не помню"]],
+  ["tr","Какой фильм или сериал лучше всего объясняет, как устроен бизнес?",["фильм","сериал","бизнес","наследник","волк","социальн","сеть"],["«Социальная сеть»: идея ничего не стоит без исполнения", "«Офис»: бизнес работает вопреки сотрудникам", "«Волк с Уолл-стрит»: как делать не надо", "Не смотрю такое"]],
+  ["tr","Какой персонаж из фильмов или сериалов был бы лучшим начальником?",["персонаж","начальник","босс","сериал","фильм","лидер"],["Альбус Дамблдор: видит потенциал даже в троечниках", "Шрек: прямолинейный, но команду не бросит", "Тони Старк: гений, хоть и с характером", "Любой, кто отпускает пораньше"]],
+  ["tr","Кого из миллиардеров вы бы пригласили на ужин и о чём спросили бы?",["миллиардер","ужин","спрос","маск","безос","совет"],["Уоррена Баффетта: какую ошибку он не повторил бы никогда", "Илона Маска: можно ли мне на Марс, но без работы", "Джеффа Безоса: как начать в гараже и не бросить", "Любого, кто заплатит за ужин"]],
+  ["tr","Если бы вы стали блогером-миллионником, какой продукт выпустили бы первым?",["блогер","миллион","продукт","мерч","бренд","подписчик"],["Курс «Как стать блогером» для тех, кто хочет стать блогером", "Кружку с моим лицом, которая грустит, если вы пьёте чай без меня", "Свою линию одежды с цитатами из видео", "Ничего, просто снимал бы дальше"]],
+  ["tr","Какая песня — гимн вашего рабочего дня?",["песн","гимн","рабоч","день","понедельник","трек"],["«Eye of the Tiger» утром и «Bohemian Rhapsody» к пятнице", "Звук уведомления из рабочего чата в ремиксе", "«Don't Stop Me Now» от Queen", "Тишина, наушники и белый шум"]],
+  ["tr","Чей стиль ведения переговоров вам ближе: Тони Старка или Майкла Скотта из «Офиса»?",["старк","скотт","переговор","офис","стиль","железн"],["Тони Старк: готовлюсь до мелочей, а потом всё равно импровизирую", "Майкл Скотт: никто не понимает, к чему я веду, но сделка закрыта", "Где-то посередине, смотря по партнёру", "Ни тот, ни другой: я просто соглашаюсь"]],
+  ["tr","Какой рекламный ролик со звездой вы помните до сих пор и почему?",["реклам","ролик","звезд","помн","бренд","песн"],["Где звезда смеялась над собой: честность запоминается", "Где пели так навязчиво, что я пою это до сих пор", "Спортивную рекламу с великим футболистом", "Никакую не помню"]],
+  ["tr","Какую знаменитость вы бы взяли на корпоратив и чем бы она занималась?",["знаменит","корпоратив","ведущ","песн","тост","танц"],["Гордона Рамзи: пусть оценит наш фуршет и наши отчёты", "Киану Ривза: просто чтобы все стали добрее", "Эда Ширана: живая музыка решает", "Любую, лишь бы был фуршет"]],
+  ["tr","Какая коллаборация двух брендов или звёзд кажется вам самой гениальной?",["коллаб","бренд","звезд","гениальн","кроссовк","фастфуд"],["«Барбенгеймер»: два фильма-конкурента в один день раскрутили друг друга", "Фастфуд с модным брендом: абсурд, но очереди на квартал", "Спортивный бренд и великий баскетболист: классика", "Не слежу за коллаборациями"]],
+];
+const CORP = ["синерг","kpi","кпи","дедлайн","созвон","митинг","совещан","слайд","презентац","эксель","excel","стратег","фидбек","фидбэк","бюджет","бухгалтер","стартап","нейросет","кофе","отпуск","повышен","преми","фикус","тимбилдинг","agile","скрам","спринт","мотивац","оптимизац","кейс","дашборд","бэклог","аутсорс","делегир","мем",
+  "выручк","маржа","маржин","прибыл","инвестор","инвестиц","конкурент","бренд","воронк","юнит","mvp","пивот","рынок","скидк","подписк","партнер","переговор","маркетинг","таргет","b2b","лид","конверси","кэшфлоу","roi","франшиз","экосистем","масштаб","монетиз","упаковк","ценност","аудитори","кешбэк","лояльност","бизнес-модел","краудфандинг","ipo","акционер","хайп","коллаб","фанат","блогер","мерч","тур","инфлюенс","стрим","тикток","спонсор","контракт","амбассадор","рейтинг","охват","подписчик"];
+const PRIORITY = { dl: ["Блокер","Критичный","Горит"], tr: ["Без приоритета","Личное","Конфиденциально"] };
+const TITLES = ["Генеральный директор по креативу","Вице-президент по синергии","Главный по дедлайнам","Директор по выручке","Хранитель офисного фикуса","Стажёр с большим будущим"];
+const NPAL = 8;
+
+// ───────── scoring (same rules as the rules panel) ─────────
+const norm = w => w.toLowerCase().replace(/ё/g,"е");
+const words = t => (t.match(/[a-zA-Zа-яА-ЯёЁ0-9]+/g) || []).map(norm);
+const hasStem = (ws, s) => { s = norm(s); return ws.some(w => w.startsWith(s)); };
+function score(text, card, others, elapsed, timedOut, limit){
+  const ws = words(text), n = ws.length, parts = [];
+  if (!n) return { total:0, parts:[["Тишина в эфире",0]], verdict:"Ни слова. Классическое «я на созвоне»." };
+  parts.push(["Объём", n<=2?1 : n<=5?4 : n<=15?8 : n<=30?10 : 7]);
+  if (n >= 4) parts.push(["Разнообразие", Math.round(new Set(ws).size / n * 6)]);
+  const rich = new Set(ws.filter(w => w.length >= 9)).size;
+  if (rich) parts.push(["Сочные слова", Math.min(4, rich)]);
+  let emo = 0;
+  if (/!/.test(text)) emo++; if (/\?/.test(text)) emo++; if (/…|\.\.\./.test(text)) emo++;
+  if (/\p{Extended_Pictographic}/u.test(text)) emo++;
+  if ((text.match(/[A-ZА-ЯЁ]{3,}/g)||[]).length) emo++;
+  if (/[«"].+[»"]/.test(text)) emo++;
+  if (emo) parts.push(["Эмоции", Math.min(4, emo)]);
+  const cardWs = new Set(words(card[1]));
+  const own = ws.filter(w => !cardWs.has(w));           // words the player wrote, not copied from the card
+  const copied = n >= 3 && (n - own.length) / n > 0.6;
+  const topic = card[2].filter(s => hasStem(own, s)).length;
+  if (topic) parts.push(["По теме", Math.min(4, topic*2)]);
+  const corp = CORP.filter(s => hasStem(own, s)).length;
+  if (corp) parts.push(["Бизнес-словарь", Math.min(6, corp*2)]);
+  if (!timedOut && n >= 4 && !copied) {
+    let sp = Math.round((limit - elapsed) / limit * 5);
+    if (card[0] === "dl") sp *= 2;
+    if (sp) parts.push([card[0] === "dl" ? "Скорость ×2" : "Скорость", sp]);
+  }
+  if (timedOut) parts.push(["Дедлайн сорван", -3]);
+  if (copied) parts.push(["Переписал(а) вопрос", -8]);
+  const mine = new Set(ws); let worst = 0;
+  for (const o of others) {
+    const os = new Set(words(o)); if (!os.size) continue;
+    const inter = [...mine].filter(w => os.has(w)).length;
+    worst = Math.max(worst, inter / new Set([...mine, ...os]).size);
+  }
+  if (worst >= 0.5) parts.push(["Похоже на соседа", -Math.round(worst*8)]);
+  parts.push(["Настроение босса", Math.floor(Math.random()*3)]);
+  const total = Math.max(0, parts.reduce((s,p) => s + p[1], 0));
+  const verdict = total>=30 ? "Гениально! Инвесторы уже звонят." : total>=22 ? "Сильно. Совет директоров аплодирует."
+    : total>=15 ? "Достойно. Можно в презентацию." : total>=8 ? "Неплохо, но нужно больше синергии." : "Давайте обсудим это на следующем созвоне.";
+  return { total, parts, verdict };
+}
+
+const TIERS = [["Сильный ход",12],["Креатив",10],["Рабочий вариант",8],["Осторожно",4]];
+function scoreChoice(k, card, sameCount, elapsed, timedOut, limit){
+  const [tier, pts] = TIERS[k], parts = [["Готовый вариант · " + tier, pts]];
+  if (!timedOut) { let sp = Math.round((limit - elapsed) / limit * 3); if (card[0] === "dl") sp *= 2; if (sp) parts.push([card[0]==="dl" ? "Скорость ×2" : "Скорость", sp]); }
+  if (sameCount > 1) parts.push(["Мейнстрим: такой же выбор у других", -3]);
+  parts.push(["Настроение босса", Math.floor(Math.random()*3)]);
+  const total = Math.max(0, parts.reduce((s,p) => s + p[1], 0));
+  const verdict = k === 0 ? "Хороший выбор. Свой ответ мог бы принести ещё больше." : k === 3 ? "Слишком осторожно для звёздного бизнеса." : "Неплохо, но готовые идеи есть у всех.";
+  return { total, parts, verdict };
+}
+
+// ───────── state ─────────
+// Players are objects with a stable id (keeps their colour); the team can change at any moment between turns.
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const col = p => `var(--p${(p.id % NPAL) + 1})`;
+let S;
+function fresh(){
+  return { screen:"setup", players:[{id:0,name:"Аня",score:0},{id:1,name:"Борис",score:0}], nextId:2,
+    rounds:5, limit:30, deck:[], round:0, played:0, order:[], turn:0, answers:{}, results:[], last:null, ticket:0, back:null, teamMsg:"" };
+}
+const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const card = () => S.deck[(S.round-1) % S.deck.length];
+const byId = id => S.players.find(p => p.id === id);
+const app = document.getElementById("app");
+let timer = null;
+
+// ───────── shared pieces ─────────
+function topBar(){
+  const inGame = !["setup","final","team"].includes(S.screen);
+  const canEdit = inGame && S.screen !== "answer";
+  return `<header class="top"><div class="logo">Правда <span class="or">или</span> <span class="dl">Дедлайн</span></div>
+    <div class="top-right">${inGame ? `<span class="round-pill">Раунд ${S.round} / ${S.rounds}</span>` : ""}
+    ${canEdit ? `<button class="team-btn" id="team">Команда · ${S.players.length}</button>` : ""}
+    ${inGame ? `<button class="team-btn exit-btn" id="exit">Выйти</button>` : ""}</div></header>`;
+}
+function ticketHtml(){
+  const c = card(), dl = c[0]==="dl";
+  return `<article class="ticket ${dl?"k-dl":"k-tr"}">
+    <div class="t-head"><span>TASK-${4100 + S.ticket} · <span class="kind">${dl?"ДЕДЛАЙН":"ПРАВДА"}</span></span><span>Приоритет: ${PRIORITY[c[0]][S.ticket % 3]}</span></div>
+    <div class="t-body"><div class="q">${esc(c[1])}</div>
+    <div class="hint">${dl ? `<span class="tag">×2</span> Бизнес-кейс из мира звёзд: быстрый ответ даёт двойной бонус скорости.` : `<span class="tag">честно</span> Только правда. Ну или очень правдоподобно.`}</div></div></article>`;
+}
+function boardHtml(title = "Квартальный KPI"){
+  const ps = [...S.players].sort((a,b) => b.score - a.score);
+  const top = Math.max(1, ...ps.map(p => p.score));
+  return `<section class="panel"><h2>${title}</h2><div class="board">${ps.map((p,k)=>`
+    <div class="brow" style="--pc:${col(p)}"><span class="pl">${k+1}.</span><span class="nm">${esc(p.name)}</span>
+    <span class="bar"><i style="width:${p.score/top*100}%"></i></span><span class="sc">${p.score}</span></div>`).join("")}</div></section>`;
+}
+// Team editor used both before the game and between turns.
+function teamEditorHtml(withScores){
+  return `<div class="players" id="players">${S.players.map(p=>`
+      <div class="prow" style="--pc:${col(p)}"><span class="dot"></span>
+      <input id="name-${p.id}" data-id="${p.id}" maxlength="18" value="${esc(p.name)}" aria-label="Имя игрока">
+      ${withScores ? `<span class="pts">${p.score} очк.</span>` : ""}
+      <button class="icon-btn" data-del="${p.id}" aria-label="Убрать игрока ${esc(p.name)}" ${S.players.length<=1?"disabled":""}>×</button></div>`).join("")}</div>
+    <form class="addrow" id="addform"><input id="newname" maxlength="18" placeholder="Имя нового игрока" aria-label="Имя нового игрока"><button class="btn ghost" type="submit">+ Добавить</button></form>
+    <p class="err" id="err"></p>`;
+}
+function bindTeamEditor(onChange){
+  const err = document.getElementById("err");
+  const nameTaken = (name, exceptId) => S.players.some(p => p.id !== exceptId && p.name.trim().toLowerCase() === name.trim().toLowerCase());
+  document.querySelectorAll("#players input").forEach(i => i.addEventListener("input", () => {
+    const p = byId(+i.dataset.id); p.name = i.value;
+    err.textContent = nameTaken(i.value, p.id) ? "Такое имя уже есть: добавьте фамилию или должность." : "";
+  }));
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+    if (S.players.length <= 1) return;
+    removePlayer(+b.dataset.del); onChange();
+  });
+  document.getElementById("addform").addEventListener("submit", e => {
+    e.preventDefault();
+    const inp = document.getElementById("newname"), name = inp.value.trim();
+    if (!name) { err.textContent = "Впишите имя нового игрока."; return; }
+    if (nameTaken(name, -1)) { err.textContent = "Такое имя уже есть: добавьте фамилию или должность."; return; }
+    S.players.push({ id: S.nextId++, name, score: 0 });
+    if (S.round > 0) S.teamMsg = `${name} в команде и вступит в игру со следующего раунда.`;
+    onChange(); const ni = document.getElementById("newname"); if (ni) ni.focus();
+  });
+}
+function removePlayer(id){
+  const idx = S.order.indexOf(id);
+  if (idx >= 0) {
+    S.order.splice(idx, 1);
+    if (idx < S.turn) S.turn--;           // they already answered this round: drop their answer too
+  }
+  delete S.answers[id];
+  S.players = S.players.filter(p => p.id !== id);
+}
+const cleanNames = () => S.players.forEach((p,k) => { p.name = p.name.trim() || `Игрок ${k+1}`; });
+
+// ───────── exit dialog (built into the page: the viewer has no confirm()) ─────────
+let timerCtl = null, keyCleanup = null;
+function openExit(){
+  if (document.getElementById("exitdlg")) return;
+  timerCtl && timerCtl.pause();
+  const played = S.played > 0;
+  const d = document.createElement("div");
+  d.id = "exitdlg"; d.className = "overlay";
+  d.innerHTML = `<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="exit-h">
+    <h2 id="exit-h">Выйти из игры?</h2>
+    <p class="muted">${played ? `Сыграно ${S.played} ${plural(S.played,["раунд","раунда","раундов"])} из ${S.rounds}. Можно подвести итоги по набранным очкам или вернуться в меню.` : "Ни одного раунда ещё не сыграно. Можно вернуться в меню."}${S.screen==="answer" ? " Таймер на паузе." : ""}</p>
+    <div class="row">${played ? `<button class="btn" id="x-final">Подвести итоги</button>` : ""}
+    <button class="btn ${played ? "ghost" : ""}" id="x-menu">В главное меню</button>
+    <button class="btn ghost" id="x-cancel">Продолжить игру</button></div></div>`;
+  document.body.appendChild(d);
+  const close = () => d.remove();
+  document.getElementById("x-cancel").onclick = () => { close(); timerCtl && timerCtl.resume(); };
+  document.getElementById("x-menu").onclick = () => { close(); timerCtl = null; S.players.forEach(p => p.score = 0); S.round = 0; S.order = []; S.played = 0; S.screen = "setup"; render(); };
+  const xf = document.getElementById("x-final");
+  if (xf) xf.onclick = () => { close(); timerCtl = null; S.screen = "final"; render(); };
+  d.addEventListener("keydown", e => { if (e.key === "Escape") document.getElementById("x-cancel").click(); });
+  document.getElementById("x-cancel").focus();
+}
+
+// ───────── screens ─────────
+function render(){
+  clearInterval(timer); timerCtl = null; if (keyCleanup) { keyCleanup(); keyCleanup = null; }
+  const v = { setup, intro, handoff, answer, results, final, team }[S.screen]();
+  app.innerHTML = topBar() + v.html;
+  const tb = document.getElementById("team");
+  if (tb) tb.onclick = () => { S.back = S.screen; S.teamMsg = ""; S.screen = "team"; render(); };
+  const xb = document.getElementById("exit");
+  if (xb) xb.onclick = openExit;
+  v.bind && v.bind();
+  window.scrollTo({top:0});
+}
+
+function setup(){
+  return { html: `
+  <section class="hero"><h1>Правда или <span class="dl">Дедлайн</span>: звёздная бизнес-игра на <span class="tr">креатив</span></h1>
+  <p>Играйте одни или командой любого размера на одном устройстве. Каждый раунд — бизнес-кейс из мира поп-культуры (звёзды, бренды, блокбастеры) или честный вопрос о знаменитостях и деньгах. На ответ ${S.limit} секунд: выберите один из четырёх вариантов или придумайте свой — свой оценивается выше.</p></section>
+  <section class="panel"><div class="panel-head"><h2>Команда</h2><span class="label">${S.players.length} ${plural(S.players.length,["игрок","игрока","игроков"])}</span></div>
+    ${teamEditorHtml(false)}
+    <p class="note">Можно играть одному. Добавлять и убирать игроков можно и во время игры, кнопкой «Команда».</p>
+    <div class="settings">
+      <div><span class="label">Раундов</span><div class="seg" id="rounds">${[3,5,7,10].map(r=>`<button data-v="${r}" aria-pressed="${S.rounds===r}">${r}</button>`).join("")}</div></div>
+      <div><span class="label">Секунд на ответ</span><div class="seg" id="limit">${[20,30,45,60].map(r=>`<button data-v="${r}" aria-pressed="${S.limit===r}">${r}</button>`).join("")}</div></div>
+    </div>
+    <div class="row" style="margin-top:20px"><button class="btn big" id="start">Начать игру →</button></div>
+  </section>
+  <section class="panel"><h2>Как начисляются очки</h2><ul class="rules">
+    <li><b>+10</b><span>Объём: лучше всего 6–30 слов</span></li>
+    <li><b>+6</b><span>Разнообразие слов, без повторов</span></li>
+    <li><b>+4</b><span>Сочные длинные слова</span></li>
+    <li><b>+4</b><span>Эмоции: ! ? … эмодзи, КАПС, «цитаты»</span></li>
+    <li><b>+4</b><span>Попадание в тему карточки</span></li>
+    <li><b>+6</b><span>Бизнес-словарь: выручка, хайп, коллаб, мерч, MVP…</span></li>
+    <li><b>+10</b><span>Скорость (×2 на карточках ДЕДЛАЙН)</span></li>
+    <li><b>+2</b><span>Настроение босса — немного удачи</span></li>
+    <li><b>+4…+12</b><span>Готовый вариант: сильный ход, креатив, рабочий или осторожный</span></li>
+    <li><b>−3…−8</b><span>Время вышло, переписал вопрос, ответ как у соседа</span></li>
+  </ul></section>`,
+  bind(){
+    bindTeamEditor(() => render());
+    document.querySelectorAll("#rounds button").forEach(b => b.onclick = () => { S.rounds=+b.dataset.v; render(); });
+    document.querySelectorAll("#limit button").forEach(b => b.onclick = () => { S.limit=+b.dataset.v; render(); });
+    document.getElementById("start").onclick = () => {
+      cleanNames();
+      const names = S.players.map(p => p.name.toLowerCase());
+      if (new Set(names).size !== names.length) { document.getElementById("err").textContent = "Имена повторяются: добавьте фамилию или должность."; return; }
+      S.players.forEach(p => p.score = 0);
+      S.deck = shuffle(CARDS); S.round = 1; S.played = 0; S.ticket = Math.floor(Math.random()*800); startRound();
+    };
+  }};
+}
+const plural = (n, f) => f[(n%10===1 && n%100!==11) ? 0 : (n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20)) ? 1 : 2];
+
+function team(){
+  return { html: `
+  <section class="panel"><div class="panel-head"><h2>Команда</h2><span class="label">Раунд ${S.round} / ${S.rounds}</span></div>
+    ${S.teamMsg ? `<p class="toast" style="margin:0 0 12px">${esc(S.teamMsg)}</p>` : ""}
+    ${teamEditorHtml(true)}
+    <p class="note">Новые игроки начинают с нуля и отвечают со следующего раунда. Если убрать игрока посреди раунда, его ход пропускается.</p>
+    <div class="row" style="margin-top:16px"><button class="btn big" id="done">Вернуться к игре →</button></div>
+  </section>`,
+  bind(){
+    bindTeamEditor(() => render());
+    document.getElementById("done").onclick = () => {
+      cleanNames();
+      const names = S.players.map(p => p.name.toLowerCase());
+      if (new Set(names).size !== names.length) { document.getElementById("err").textContent = "Имена повторяются: добавьте фамилию или должность."; return; }
+      S.teamMsg = "";
+      // If the round's remaining players were all removed, score what we have.
+      if ((S.back === "handoff" || S.back === "intro") && S.turn >= S.order.length) return scoreRound();
+      S.screen = S.back || "intro"; render();
+    };
+  }};
+}
+
+function startRound(){
+  const ids = S.players.map(p => p.id), n = ids.length, first = (S.round-1) % n;
+  S.order = Array.from({length:n}, (_,k) => ids[(first+k) % n]);
+  S.turn = 0; S.answers = {}; S.last = null; S.ticket++; S.optOrder = shuffle([0,1,2,3]);
+  S.screen = "intro"; render();
+}
+
+function intro(){
+  const solo = S.order.length === 1;
+  return { html: `${ticketHtml()}
+  <section class="panel"><h2>${solo ? "Ваш ход" : "Порядок ответов"}</h2>
+    <div class="row">${S.order.map((id,k)=>{ const p = byId(id); return `<span style="color:${col(p)};font-weight:700">${esc(p.name)}</span>${k<S.order.length-1?'<span class="muted">→</span>':""}`; }).join(" ")}</div>
+    <p class="muted" style="margin:12px 0 16px">${solo ? "Таймер запустится, когда вы будете готовы." : "Ответы остальных откроются только в конце раунда."}</p>
+    <button class="btn big" id="go">${solo ? "Я готов(а) →" : "Передать первому игроку →"}</button></section>`,
+  bind(){ document.getElementById("go").onclick = () => { S.screen = solo ? "answer" : "handoff"; render(); }; } };
+}
+
+function handoff(){
+  const p = byId(S.order[S.turn]);
+  const t = S.last ? (S.last.timedOut
+      ? `<span class="toast bad">${esc(S.last.name)}: дедлайн сорван, отправлено то, что успели</span>`
+      : `<span class="toast">Ответ игрока ${esc(S.last.name)} принят за ${S.last.elapsed.toFixed(1)} с</span>`) : "";
+  const others = S.order.length > 1;
+  return { html: `<section class="handoff" style="--pc:${col(p)}">${t}
+    <span class="label">${others ? "Передайте устройство" : "Ваш ход"}</span>
+    <div class="who">${esc(p.name)}</div>
+    <p>${others ? "Остальные — отвернитесь от экрана. " : ""}Таймер на ${S.limit} секунд запустится, как только вы нажмёте кнопку.</p>
+    <div><button class="btn big" id="ready">Я готов(а), показать задачу</button></div></section>`,
+  bind(){ const b = document.getElementById("ready"); b.focus(); b.onclick = () => { S.screen="answer"; render(); }; } };
+}
+
+function answer(){
+  const p = byId(S.order[S.turn]), c = card(), L = "ABCD";
+  const order = S.optOrder || [0,1,2,3];
+  return { html: `${ticketHtml()}
+  <section class="timer t-calm" id="timer"><div class="clock"><small>Дедлайн через</small><span id="clock">00:${String(S.limit).padStart(2,"0")}</span></div>
+    <div class="track"><div class="fill" id="fill"></div></div></section>
+  <section style="--pc:${col(p)};display:flex;flex-direction:column;gap:12px">
+    <span class="label" style="color:${col(p)}">Ответ: ${esc(p.name)} · выберите вариант или напишите свой</span>
+    <div class="opts">${order.map((k,j)=>`<button class="opt" data-k="${k}"><span class="opt-l">${L[j]}</span><span>${esc(c[3][k])}</span></button>`).join("")}</div>
+    <div class="or-line"><span>или свой вариант — он оценивается выше</span></div>
+    <textarea id="ans" maxlength="400" placeholder="Пишите быстро, смело и по делу…" aria-label="Свой вариант"></textarea>
+    <div class="answer-foot"><span class="muted" style="font-size:14px">1–4 — выбрать вариант · Enter — отправить свой</span>
+    <button class="btn big" id="send">Отправить свой</button></div></section>`,
+  bind(){
+    const ta = document.getElementById("ans"), clock = document.getElementById("clock"), fill = document.getElementById("fill"), box = document.getElementById("timer");
+    const first = document.querySelector(".opt"); if (first) first.focus();
+    let t0 = performance.now(), pausedAt = 0;
+    const limit = S.limit;
+    let done = false;
+    const finish = (timedOut, opt = null) => {
+      if (done) return; done = true; clearInterval(timer);
+      const elapsed = timedOut ? limit : (performance.now()-t0)/1000;
+      const text = opt === null ? ta.value.trim() : c[3][opt];
+      S.answers[p.id] = { text, elapsed, timedOut: timedOut && opt === null, opt };
+      S.last = { name: p.name, elapsed, timedOut };
+      const next = () => { S.turn++; if (S.turn < S.order.length) { S.screen="handoff"; render(); } else scoreRound(); };
+      if (timedOut) { const f = document.createElement("div"); f.className="flash"; f.textContent="ДЕДЛАЙН!"; document.body.appendChild(f); setTimeout(()=>{ f.remove(); next(); }, 900); }
+      else next();
+    };
+    const tick = () => {
+      const left = Math.max(0, limit - (performance.now()-t0)/1000), frac = left/limit;
+      clock.textContent = "00:" + String(Math.ceil(left)).padStart(2,"0");
+      fill.style.transform = `scaleX(${frac})`;
+      box.className = "timer " + (frac>0.5 ? "t-calm" : frac>0.2 ? "t-warn" : "t-panic");
+      if (left <= 0) finish(true);
+    };
+    timer = setInterval(tick, 100); tick();
+    timerCtl = {
+      pause(){ if (!pausedAt) { pausedAt = performance.now(); clearInterval(timer); } },
+      resume(){ if (pausedAt) { t0 += performance.now() - pausedAt; pausedAt = 0; timer = setInterval(tick, 100); tick(); } },
+    };
+    document.querySelectorAll(".opt").forEach(b => b.onclick = () => finish(false, +b.dataset.k));
+    ta.addEventListener("keydown", e => { if (e.key==="Enter" && !e.shiftKey) { e.preventDefault(); if (ta.value.trim()) finish(false); } });
+    document.getElementById("send").onclick = () => { if (ta.value.trim()) finish(false); else ta.focus(); };
+    const keyPick = e => {
+      if (done || document.getElementById("exitdlg") || document.activeElement === ta) return;
+      const j = "1234".indexOf(e.key); if (j >= 0) { e.preventDefault(); finish(false, order[j]); }
+    };
+    document.addEventListener("keydown", keyPick);
+    const stop = () => document.removeEventListener("keydown", keyPick);
+    const _finish = finish; // detach the shortcut once the answer is in
+    document.querySelectorAll(".opt").forEach(b => b.addEventListener("click", stop));
+    ta.addEventListener("keydown", e => { if (e.key==="Enter" && !e.shiftKey && ta.value.trim()) stop(); });
+    document.getElementById("send").addEventListener("click", () => { if (ta.value.trim()) stop(); });
+    keyCleanup = stop;
+  }};
+}
+
+function scoreRound(){
+  const c = card(), ids = S.order.filter(id => S.answers[id] && byId(id));
+  S.results = ids.map(id => {
+    const a = S.answers[id];
+    const r = (a.opt !== null && a.opt !== undefined)
+      ? scoreChoice(a.opt, c, ids.filter(j => S.answers[j].opt === a.opt).length, a.elapsed, a.timedOut, S.limit)
+      : score(a.text, c, ids.filter(j => j !== id && (S.answers[j].opt === null || S.answers[j].opt === undefined)).map(j => S.answers[j].text), a.elapsed, a.timedOut, S.limit);
+    byId(id).score += r.total;
+    return { id, text:a.text, opt:a.opt, ...r };
+  });
+  S.played = S.round;
+  S.screen = "results"; render();
+}
+
+function results(){
+  const best = Math.max(0, ...S.results.map(r=>r.total));
+  const last = S.round >= S.rounds, solo = S.results.length === 1;
+  return { html: `${ticketHtml()}
+  <section class="results"><h2 style="font-size:20px">${solo ? "Ваш ответ" : "Ответы раунда"}</h2>${S.results.length ? S.results.map(r=>{ const p = byId(r.id) || {id:r.id,name:"—"}; return `
+    <article class="res" style="--pc:${col(p)}">
+      <div class="res-head"><span class="res-name">${esc(p.name)}${!solo && r.total===best && best>0 ? '<span class="crown">ЛУЧШИЙ ОТВЕТ</span>' : ""}</span><span class="res-pts">+${r.total}</span></div>
+      <blockquote>${r.opt !== null && r.opt !== undefined ? `<span class="label">Готовый вариант ${"ABCD"[(S.optOrder||[0,1,2,3]).indexOf(r.opt)]}</span><br>` : (r.text ? `<span class="label">Свой ответ</span><br>` : "")}${r.text ? esc(r.text) : '<span class="muted">…ничего не успел(а) написать</span>'}</blockquote>
+      <div class="chips">${r.parts.map(([n,pt])=>`<span class="chip ${pt>0?"plus":pt<0?"minus":""}">${esc(n)} ${pt>0?"+"+pt:pt}</span>`).join("")}</div>
+      <div class="verdict">${esc(r.verdict)}</div></article>`; }).join("") : `<p class="muted">В этом раунде никто не ответил.</p>`}</section>
+  ${boardHtml(solo && S.players.length === 1 ? "Ваш KPI" : "Квартальный KPI")}
+  <div><button class="btn big" id="next">${last ? "Подвести итоги →" : "Следующий раунд →"}</button></div>`,
+  bind(){ document.getElementById("next").onclick = () => { if (last) { S.screen="final"; render(); } else { S.round++; startRound(); } }; } };
+}
+
+function final(){
+  const ps = [...S.players].sort((a,b) => b.score - a.score);
+  const top = ps.slice(0, 3), solo = ps.length === 1;
+  const winners = ps.filter(p => p.score === ps[0].score).map(p => esc(p.name));
+  const R = Math.max(1, S.played);
+  const memo = solo ? `${winners[0]}, ваш результат — ${ps[0].score} очков за ${R} ${plural(R,["раунд","раунда","раундов"])}. ${ps[0].score >= R*25 ? "Уровень: совет директоров." : ps[0].score >= R*15 ? "Уровень: руководитель направления." : "Уровень: перспективный стажёр. Попробуйте ещё раз!"}`
+    : winners.length > 1 ? `Ничья! ${winners.join(", ")} делят кабинет с видом на парковку.`
+    : `${winners[0]} получает переходящий степлер славы и годовой запас печенек.`;
+  return { html: `
+  <section class="hero"><span class="label">${S.played < S.rounds ? `Итоги после ${S.played} из ${S.rounds} раундов` : "Итоги квартала"}</span><h1>Совещание окончено</h1></section>
+  <section class="podium n${top.length}" style="--cols:${top.length}">${top.map((p,k)=>`
+    <div class="step p${k+1}" style="--pc:${col(p)}"><span class="place">${solo ? "Ваш итог" : (k+1) + " место"}</span><span class="nm">${esc(p.name)}</span>
+    <span class="sc">${p.score} очк.</span><span class="ttl">${TITLES[Math.min(k, TITLES.length-1)]}</span></div>`).join("")}</section>
+  ${ps.length > 3 ? `<section class="panel others">${ps.slice(3).map((p,k)=>`<div><b style="color:${col(p)}">${k+4}. ${esc(p.name)}</b> · ${p.score} очк. <span class="muted">— ${TITLES[Math.min(k+3, TITLES.length-1)]}</span></div>`).join("")}</section>` : ""}
+  <div class="memo">${memo}</div>
+  ${solo ? "" : boardHtml()}
+  <div class="row"><button class="btn big" id="again">Сыграть ещё раз</button><button class="btn ghost" id="new">Изменить команду</button></div>`,
+  bind(){
+    document.getElementById("again").onclick = () => { S.players.forEach(p => p.score = 0); S.deck = shuffle(CARDS); S.round = 1; S.played = 0; startRound(); };
+    document.getElementById("new").onclick = () => { S.players.forEach(p => p.score = 0); S.round = 0; S.order = []; S.played = 0; S.screen = "setup"; render(); };
+  }};
+}
+
+// ───────── boot (keeps a game in progress across page updates) ─────────
+function start(data){
+  S = data && data.screen && Array.isArray(data.players) && data.players[0] && typeof data.players[0] === "object" ? data : fresh();
+  if (S.screen === "answer") S.screen = S.order.length > 1 ? "handoff" : "intro"; // restart an interrupted turn with a full timer
+  render();
+}
+window.claude?.hot?.snapshot?.(() => S);
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
+</body>
+</html>
