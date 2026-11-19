@@ -199,6 +199,9 @@ textarea:focus{border-color:var(--pc);outline:none;box-shadow:0 0 0 3px color-mi
 .opt{display:flex;gap:12px;align-items:flex-start;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:14px;font-size:16px;line-height:1.4;min-width:0}
 .opt:hover{border-color:var(--pc);background:var(--surface-2)}
 .opt-l{font-family:var(--f-mono);font-weight:700;flex:none;width:26px;height:26px;border-radius:6px;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--line);color:var(--pc)}
+.opt.wild{grid-column:1/-1;border-style:dashed;border-width:2px;background:linear-gradient(110deg,color-mix(in srgb,var(--marker) 22%,var(--surface)),color-mix(in srgb,var(--deadline) 10%,var(--surface)))}
+.opt.wild .opt-l{background:var(--marker);color:var(--marker-ink);border-color:transparent;font-size:15px}
+.opt.wild:hover{border-color:var(--deadline)}
 .or-line{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:14px}
 .or-line::before,.or-line::after{content:"";flex:1;height:1px;background:var(--line)}
 @media (max-width:560px){.opts{grid-template-columns:1fr}}
@@ -1013,14 +1016,34 @@ function score(text, card, others, elapsed, timedOut, limit){
   return { total, parts, verdict };
 }
 
+// «Ва-банк»: смешная идея из чужого кейса (чаще всего «креативный» вариант), а рынок бросает кубик
+function wildIdea(c){
+  for (let i = 0; i < 20; i++) {
+    const o = CARDS[Math.floor(Math.random() * CARDS.length)];
+    if (o === c) continue;
+    const k = Math.random() < .6 ? 1 : Math.floor(Math.random() * 4);
+    return o[3][k];
+  }
+  return c[3][1];
+}
+function scoreWild(card, elapsed, limit){
+  const roll = Math.random(), parts = [];
+  let verdict;
+  if (roll < .4) { parts.push(["🎲 Ва-банк: ХАЙП!", 18 + Math.floor(Math.random()*8)]); verdict = "🚀 Рынок сошёл с ума — идея выстрелила!"; }
+  else if (roll < .75) { parts.push(["🎲 Ва-банк: рынок не понял", 4 + Math.floor(Math.random()*5)]); verdict = "🤷 Странно, но кто-то купил."; }
+  else { parts.push(["🎲 Ва-банк: БАНКРОТ", 0]); verdict = "💥 Банкрот. Зато какая история!"; }
+  if (parts[0][1]) { let sp = Math.round((limit - elapsed) / limit * 3); if (card[0] === "dl") sp *= 2; if (sp) parts.push([card[0]==="dl" ? "Скорость ×2" : "Скорость", sp]); }
+  const total = parts.reduce((s,p) => s + p[1], 0);
+  return { total, parts, verdict, crash: !parts[0][1] };
+}
 const TIERS = [["Сильный ход",12],["Креатив",10],["Рабочий вариант",8],["Осторожно",4]];
 function scoreChoice(k, card, sameCount, elapsed, timedOut, limit){
-  const [tier, pts] = TIERS[k], parts = [["Готовый вариант · " + tier, pts]];
+  const [tier, pts] = TIERS[k], parts = [[tier, pts]];
   if (!timedOut) { let sp = Math.round((limit - elapsed) / limit * 3); if (card[0] === "dl") sp *= 2; if (sp) parts.push([card[0]==="dl" ? "Скорость ×2" : "Скорость", sp]); }
   if (sameCount > 1) parts.push(["Мейнстрим: такой же выбор у других", -3]);
   parts.push(["Настроение босса", Math.floor(Math.random()*3)]);
   const total = Math.max(0, parts.reduce((s,p) => s + p[1], 0));
-  const verdict = k === 0 ? "Хороший выбор. Свой ответ мог бы принести ещё больше." : k === 3 ? "Слишком осторожно для звёздного бизнеса." : "Неплохо, но готовые идеи есть у всех.";
+  const verdict = k === 0 ? "Сильный ход! Рынок в восторге." : k === 3 ? "Слишком осторожно для звёздного бизнеса." : "Неплохо, но рынок ждал чего-то посмелее.";
   return { total, parts, verdict };
 }
 
@@ -1196,7 +1219,7 @@ function setup(){
       </svg>
       <span class="w w-hype"><i>Хайп</i></span><span class="w-or">или</span><span class="w w-bank">Банкрот</span>
     </div>
-    <p>Играйте одни или командой любого размера на одном устройстве. Каждый раунд — смешной бизнес-кейс (звёзды, блогеры, школьные стартапы, коты на клавиатуре, бабушки-инвесторы) или честный вопрос о вас и деньгах. Выберите один из четырёх вариантов или придумайте свой. Каждый ответ выдаёт ваш бизнес-психотип: в конце вы узнаете, кто вы: Акула, Визионер, Шоумен или один из 15 гибридов вроде «Продавца воздуха», «Безумного учёного» и «Офисной бабушки».</p>
+    <p>Играйте одни или командой любого размера на одном устройстве. Каждый раунд — смешной бизнес-кейс (звёзды, блогеры, школьные стартапы, коты на клавиатуре, бабушки-инвесторы) или честный вопрос о вас и деньгах. Выберите один из четырёх вариантов или рискните ва-банк. Каждый ответ выдаёт ваш бизнес-психотип: в конце вы узнаете, кто вы: Акула, Визионер, Шоумен или один из 15 гибридов вроде «Продавца воздуха», «Безумного учёного» и «Офисной бабушки».</p>
     <div class="cast">${TYPE_KEYS.map((k,i) => `<figure>${avatar(k, k, i, 84)}<figcaption><b>${TYPES[k].name}</b><span>${TYPES[k].nick}</span></figcaption></figure>`).join("")}</div>
     <ul class="facts"><li><b>${CARDS.length}</b>бизнес-кейсов</li><li><b>${TYPE_KEYS.length + Object.keys(HYBRIDS).length}</b>психотип (6 + 15 гибридов)</li><li><b>10</b>ачивок</li><li><b>1+</b>игроков</li></ul>
   </section>
@@ -1213,18 +1236,16 @@ function setup(){
     </div>
     <div class="row" style="margin-top:20px"><button class="btn big" id="start">${S.mode === "test" ? "Начать психотест →" : "Начать игру →"}</button></div>
   </section>
-  <section class="panel"><h2>Как начисляются очки</h2><ul class="rules">
-    <li><b>+10</b><span>Объём: лучше всего 6–30 слов</span></li>
-    <li><b>+6</b><span>Разнообразие слов, без повторов</span></li>
-    <li><b>+4</b><span>Сочные длинные слова</span></li>
-    <li><b>+4</b><span>Эмоции: ! ? … эмодзи, КАПС, «цитаты»</span></li>
-    <li><b>+4</b><span>Попадание в тему карточки</span></li>
-    <li><b>+6</b><span>Бизнес-словарь: выручка, хайп, коллаб, мерч, MVP…</span></li>
-    <li><b>+10</b><span>Скорость (×2 на карточках ДЕДЛАЙН)</span></li>
+  ${S.mode === "test" ? "" : `<section class="panel"><h2>Как начисляются очки</h2><ul class="rules">
+    <li><b>+12</b><span>Сильный ход</span></li>
+    <li><b>+10</b><span>Креативный вариант</span></li>
+    <li><b>+8</b><span>Рабочий вариант</span></li>
+    <li><b>+4</b><span>Осторожный вариант</span></li>
+    <li><b>+6</b><span>Скорость (×2 на карточках ДЕДЛАЙН)</span></li>
+    <li><b>🎲</b><span>Ва-банк: +18…25, +4…8 или банкрот</span></li>
+    <li><b>−3</b><span>Мейнстрим: тот же вариант, что у других</span></li>
     <li><b>+2</b><span>Настроение босса — немного удачи</span></li>
-    <li><b>+4…+12</b><span>Готовый вариант: сильный ход, креатив, рабочий или осторожный</span></li>
-    <li><b>−3…−8</b><span>Время вышло, переписал вопрос, ответ как у соседа</span></li>
-  </ul></section>`,
+  </ul></section>`}`,
   bind(){
     bindTeamEditor(() => render());
     document.querySelectorAll("#rounds button").forEach(b => b.onclick = () => { S.rounds=+b.dataset.v; render(); });
@@ -1301,23 +1322,21 @@ function answer(){
   ${S.mode === "test" ? "" : `<section class="timer t-calm" id="timer"><div class="clock"><small>До банкротства</small><span id="clock">00:${String(S.limit).padStart(2,"0")}</span></div>
     <div class="track"><div class="fill" id="fill"></div></div></section>`}
   <section style="--pc:${col(p)};display:flex;flex-direction:column;gap:12px">
-    <span class="label" style="color:${col(p)}">Ответ: ${esc(p.name)} · выберите вариант или напишите свой</span>
+    <span class="label" style="color:${col(p)}">Ответ: ${esc(p.name)} · выберите вариант или рискните</span>
     <div class="opts">${order.map((k,j)=>`<button class="opt" data-k="${k}"><span class="opt-l">${L[j]}</span><span>${esc(c[3][k])}</span></button>`).join("")}</div>
-    <div class="or-line"><span>${S.mode === "test" ? "или свой вариант — честно, как есть" : "или свой вариант — он оценивается выше"}</span></div>
-    <textarea id="ans" maxlength="400" placeholder="Пишите быстро, смело и по делу…" aria-label="Свой вариант"></textarea>
-    <div class="answer-foot"><span class="muted" style="font-size:14px">1–4 — выбрать вариант · Enter — отправить свой</span>
-    <button class="btn big" id="send">Отправить свой</button></div></section>`,
+    <button class="opt wild" id="wild"><span class="opt-l">🎲</span><span><b>Ва-банк</b> — вслепую взять безумную идею из другого кейса. ${S.mode === "test" ? "Для тех, кто живёт на грани." : "Рынок решит: +25, пара очков или банкрот."}</span></button>
+    <div class="answer-foot"><span class="muted" style="font-size:14px">Клавиши: 1–4 — вариант · 5 — ва-банк</span></div></section>`,
   bind(){
-    const ta = document.getElementById("ans"), clock = document.getElementById("clock"), fill = document.getElementById("fill"), box = document.getElementById("timer");
+    const clock = document.getElementById("clock"), fill = document.getElementById("fill"), box = document.getElementById("timer");
     const first = document.querySelector(".opt"); if (first) first.focus();
     let t0 = performance.now(), pausedAt = 0;
     const limit = S.limit;
     let done = false;
-    const finish = (timedOut, opt = null) => {
+    const finish = (timedOut, opt = null, wild = false) => {
       if (done) return; done = true; clearInterval(timer);
       const elapsed = timedOut ? limit : (performance.now()-t0)/1000;
-      const text = opt === null ? ta.value.trim() : c[3][opt];
-      S.answers[p.id] = { text, elapsed, timedOut: timedOut && opt === null, opt };
+      const text = wild ? wildIdea(c) : opt === null ? "" : c[3][opt];
+      S.answers[p.id] = { text, elapsed, timedOut: timedOut && opt === null && !wild, opt, wild };
       S.last = { name: p.name, elapsed, timedOut };
       const next = () => { S.turn++; if (S.turn < S.order.length) { S.screen="handoff"; render(); } else scoreRound(); };
       if (timedOut) { const f = document.createElement("div"); f.className="flash"; f.textContent="ДЕДЛАЙН!"; document.body.appendChild(f); setTimeout(()=>{ f.remove(); next(); }, 900); }
@@ -1336,19 +1355,18 @@ function answer(){
       pause(){ if (!pausedAt) { pausedAt = performance.now(); clearInterval(timer); } },
       resume(){ if (pausedAt) { t0 += performance.now() - pausedAt; pausedAt = 0; timer = setInterval(tick, 100); tick(); } },
     };
-    document.querySelectorAll(".opt").forEach(b => b.onclick = () => finish(false, +b.dataset.k));
-    ta.addEventListener("keydown", e => { if (e.key==="Enter" && !e.shiftKey) { e.preventDefault(); if (ta.value.trim()) finish(false); } });
-    document.getElementById("send").onclick = () => { if (ta.value.trim()) finish(false); else ta.focus(); };
+    document.querySelectorAll(".opt[data-k]").forEach(b => b.onclick = () => finish(false, +b.dataset.k));
+    document.getElementById("wild").onclick = () => finish(false, null, true);
     const keyPick = e => {
-      if (done || document.getElementById("exitdlg") || document.activeElement === ta) return;
+      if (done || document.getElementById("exitdlg")) return;
       const j = "1234".indexOf(e.key); if (j >= 0) { e.preventDefault(); finish(false, order[j]); }
+      if (e.key === "5") { e.preventDefault(); finish(false, null, true); }
     };
     document.addEventListener("keydown", keyPick);
     const stop = () => document.removeEventListener("keydown", keyPick);
     const _finish = finish; // detach the shortcut once the answer is in
     document.querySelectorAll(".opt").forEach(b => b.addEventListener("click", stop));
-    ta.addEventListener("keydown", e => { if (e.key==="Enter" && !e.shiftKey && ta.value.trim()) stop(); });
-    document.getElementById("send").addEventListener("click", () => { if (ta.value.trim()) stop(); });
+    document.getElementById("wild").addEventListener("click", stop);
     keyCleanup = stop;
   }};
 }
@@ -1357,18 +1375,19 @@ function scoreRound(){
   const c = card(), ids = S.order.filter(id => S.answers[id] && byId(id));
   S.results = ids.map(id => {
     const a = S.answers[id];
-    const r = (a.opt !== null && a.opt !== undefined)
+    const r = a.wild ? scoreWild(c, a.elapsed, S.limit)
+      : (a.opt !== null && a.opt !== undefined)
       ? scoreChoice(a.opt, c, ids.filter(j => S.answers[j].opt === a.opt).length, a.elapsed, a.timedOut, S.limit)
       : score(a.text, c, ids.filter(j => j !== id && (S.answers[j].opt === null || S.answers[j].opt === undefined)).map(j => S.answers[j].text), a.elapsed, a.timedOut, S.limit);
     const p = byId(id), tags = autoTags(c);
-    const trait = (a.opt !== null && a.opt !== undefined) ? tags[a.opt] : classify(a.text);
+    const trait = a.wild ? "X" : (a.opt !== null && a.opt !== undefined) ? tags[a.opt] : null;
     p.traits = p.traits || {};
     if (trait) p.traits[trait] = (p.traits[trait] || 0) + typeWeight(trait);
     if (S.mode !== "test") { p.score += r.total; p.delta = r.total; }
-    const st = p.stats = p.stats || { own:0, opts:0, fast:99, late:0, wins:0, n:0 };
-    st.n++; if (a.opt !== null && a.opt !== undefined) st.opts++; else if (a.text) st.own++;
+    const st = p.stats = p.stats || { wild:0, crash:0, opts:0, fast:99, late:0, wins:0, n:0 };
+    st.n++; if (a.wild) { st.wild = (st.wild||0) + 1; if (r.crash) st.crash = (st.crash||0) + 1; } else if (a.opt !== null && a.opt !== undefined) st.opts++;
     if (a.timedOut) st.late++; else if (a.text) st.fast = Math.min(st.fast, a.elapsed);
-    return { id, text:a.text, opt:a.opt, trait, ...r };
+    return { id, text:a.text, opt:a.opt, wild:!!a.wild, trait, ...r };
   });
   if (S.mode !== "test" && S.results.length > 1) {
     const top = Math.max(...S.results.map(r => r.total));
@@ -1386,7 +1405,7 @@ function results(){
   <section class="results"><h2 style="font-size:20px">${solo ? "Ваш ответ" : "Ответы раунда"}</h2>${S.results.length ? S.results.map(r=>{ const p = byId(r.id) || {id:r.id,name:"—"}; return `
     <article class="res" style="--pc:${col(p)}">
       <div class="res-head"><span class="res-name">${esc(p.name)}${S.mode !== "test" && !solo && r.total===best && best>0 ? '<span class="crown">ЛУЧШИЙ ОТВЕТ</span>' : ""}</span>${S.mode === "test" ? "" : `<span class="res-pts ${r.total ? "" : "flat"}">${r.total ? "▲ +" + r.total : "▬ 0"}</span>`}</div>
-      <blockquote>${r.opt !== null && r.opt !== undefined ? `<span class="label">Готовый вариант ${"ABCD"[(S.optOrder||[0,1,2,3]).indexOf(r.opt)]}</span><br>` : (r.text ? `<span class="label">Свой ответ</span><br>` : "")}${r.text ? esc(r.text) : '<span class="muted">…ничего не успел(а) написать</span>'}</blockquote>
+      <blockquote>${r.wild ? `<span class="label">🎲 Ва-банк</span><br>` : r.opt !== null && r.opt !== undefined ? `<span class="label">Вариант ${"ABCD"[(S.optOrder||[0,1,2,3]).indexOf(r.opt)]}</span><br>` : ""}${r.text ? esc(r.text) : '<span class="muted">…ничего не успел(а) написать</span>'}</blockquote>
       ${S.mode === "test" ? "" : `<div class="chips">${r.parts.map(([n,pt])=>`<span class="chip ${pt>0?"plus":pt<0?"minus":""}">${esc(n)} ${pt>0?"+"+pt:pt}</span>`).join("")}</div>
       <div class="verdict">${esc(r.verdict)}</div>`}
       ${r.trait ? `<div class="trait-line" style="--tc:${TYPES[r.trait].c}"><span class="ti">${TYPES[r.trait].icon}</span> Так ответил бы <b>${TYPES[r.trait].name}</b> <span class="muted">${TYPES[r.trait].nick}</span></div>` : ""}</article>`; }).join("") : `<p class="muted">В этом раунде никто не ответил.</p>`}</section>
@@ -1400,8 +1419,9 @@ function badges(p){
   const st = p.stats || {}, tr = p.traits || {}, out = [];
   const kinds = TYPE_KEYS.filter(k => tr[k]).length, n = st.n || 0;
   if (S.mode !== "test" && st.fast <= 5) out.push(["⚡","Спидраннер","ответ быстрее 5 секунд"]);
-  if (st.own >= 3) out.push(["✍️","Писатель","3+ своих ответа"]);
-  if (n >= 3 && !st.own) out.push(["🤖","Режим NPC","ни одного своего ответа"]);
+  if ((st.wild||0) >= 2) out.push(["🎲","Азартный игрок","ва-банк " + st.wild + " раз(а)"]);
+  if ((st.crash||0) >= 2) out.push(["💥","Серийный банкрот","прогорел(а) на ва-банке " + st.crash + " раза"]);
+  if (n >= 4 && !st.wild) out.push(["🤖","Режим NPC","ни разу не рискнул(а)"]);
   if (st.wins >= 2) out.push(["👑","Главный герой","лучший ответ раунда " + st.wins + " раза"]);
   if (st.late) out.push(["🐌","Прокрастинатор","дедлайн сорван " + st.late + " раз(а)"]);
   if (kinds >= 4) out.push(["🦎","Хамелеон","4+ разных психотипа"]);
