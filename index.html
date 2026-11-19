@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Бизнес-игра и психотест для подростков: смешные кейсы про звёзд, блогеров и школьные стартапы, 6 бизнес-психотипов, ачивки. От одного игрока и больше.">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
-<title>Правда или Дедлайн</title>
+<title>Хайп или Банкрот</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -50,6 +50,7 @@ button{cursor:pointer}
 .logo{display:flex;align-items:baseline;gap:8px;font-family:var(--f-display);font-weight:800;font-size:20px;letter-spacing:-.01em}
 .logo .or{font-family:var(--f-body);font-weight:500;font-size:14px;color:var(--muted)}
 .logo .dl{color:var(--deadline)}
+.logo .hp{background:var(--marker);color:var(--marker-ink);padding:0 6px;border-radius:4px}
 .top-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .round-pill{font-family:var(--f-mono);font-size:13px;border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--surface)}
 .team-btn{font-size:14px;border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--surface);font-weight:600}
@@ -481,7 +482,7 @@ let timer = null;
 function topBar(){
   const inGame = !["setup","final","team"].includes(S.screen);
   const canEdit = inGame && S.screen !== "answer";
-  return `<header class="top"><div class="logo">Правда <span class="or">или</span> <span class="dl">Дедлайн</span></div>
+  return `<header class="top"><div class="logo"><span class="hp">Хайп</span> <span class="or">или</span> <span class="dl">Банкрот</span></div>
     <div class="top-right">${inGame ? `<span class="round-pill">Раунд ${S.round} / ${S.rounds}</span>` : ""}
     ${canEdit ? `<button class="team-btn" id="team">Команда · ${S.players.length}</button>` : ""}
     ${inGame ? `<button class="team-btn exit-btn" id="exit">Выйти</button>` : ""}</div></header>`;
@@ -581,7 +582,7 @@ function render(){
 
 function setup(){
   return { html: `
-  <section class="hero"><h1>Правда или <span class="dl">Дедлайн</span>: звёздная бизнес-игра на <span class="tr">креатив</span></h1>
+  <section class="hero"><h1><span class="tr">Хайп</span> или <span class="dl">Банкрот</span>: бизнес-игра и психотест, где каждое решение говорит о вас всё</h1>
   <p>Играйте одни или командой любого размера на одном устройстве. Каждый раунд — смешной бизнес-кейс (звёзды, блогеры, школьные стартапы, коты на клавиатуре, бабушки-инвесторы) или честный вопрос о вас и деньгах. Выберите один из четырёх вариантов или придумайте свой. Каждый ответ выдаёт ваш бизнес-психотип: в конце вы узнаете, кто вы — Акула, Визионер, Шоумен, Дипломат, Перестраховщик или Хаос-менеджер.</p></section>
   <section class="panel"><div class="panel-head"><h2>Команда</h2><span class="label">${S.players.length} ${plural(S.players.length,["игрок","игрока","игроков"])}</span></div>
     ${teamEditorHtml(false)}
